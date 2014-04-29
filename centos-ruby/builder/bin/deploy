@@ -1,0 +1,57 @@
+#!/bin/bash -e
+
+source /opt/ruby/etc/sdk
+
+# FIXME: Is there any way to set a HOME directory based on USER instruction?
+# (bash -l doesn't help)
+#
+HOME="/opt/ruby"
+
+app_runtime_dir="${HOME}/src"
+app_src_dir="/tmp/src"
+
+function dir_not_empty() {
+  [ -n "$(ls -A "$1" 2>/dev/null)" ]
+}
+
+# Application is already installed and built, then just run it
+#
+if dir_not_empty $app_runtime_dir; then
+  cd $app_runtime_dir
+  cat Gemfile.lock
+  if is_puma_installed; then
+    puma_cfg="/opt/ruby/etc/puma.cfg"
+    exec /usr/bin/ruby_context "bundle exec 'puma --config $puma_cfg'"
+  else
+    exec /usr/bin/ruby_context "bundle exec 'rackup -P ${HOME}/run/rack.pid --host 0.0.0.0'"
+  fi
+  exit $?
+fi
+
+# The sources are mounted in $app_src_dir then execute the application build.
+#
+# FIXME: For some reason grep -e "/tmp/src" /proc/mounts return TRUE for app image (?)
+#
+if dir_not_empty $app_src_dir; then
+
+  echo "---> Installing application source"
+  mkdir -p $app_runtime_dir
+  cd $app_runtime_dir
+  cp -Rf ${app_src_dir}/* ${app_runtime_dir}/
+
+  echo "---> Building your Ruby application from source"
+  BUNDLE_WITHOUT="development:test"
+  ruby_context "bundle install --path ${HOME}/bundle --deployment"
+
+  # TODO: Add `rake assets:precompile` step here for Rails applications
+  # TODO: Add `rake db:migrate` if linked with DB container
+
+  echo "---> Build successful. Commit this image with: docker commit ${HOSTNAME} ruby-app"
+  exit 0
+else
+  echo "This image can build your Ruby source code."
+  echo "To build from a git repo, run this in your checked out repo:"
+  echo
+  echo "  docker run -v \$(pwd):/tmp/src openshift/centos-ruby-builder"
+  echo
+fi
