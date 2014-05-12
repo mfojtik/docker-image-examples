@@ -52,6 +52,8 @@ ENV APP_ROOT .
 ENV HOME     /opt/ruby
 ENV PATH     $HOME/bin:$PATH
 
+ENV STI_SCRIPTS_URL https://raw.githubusercontent.com/mfojtik/docker-image-examples/remote_scripts/centos-ruby/contrib/sti
+
 # FIXME: This might be a potential bug in STI where if we keep the USER
 # instruction here, the resulting application image will fail to run.
 #
