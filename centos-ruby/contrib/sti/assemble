@@ -1,4 +1,7 @@
 #!/bin/bash -e
+#
+# Default STI assemble script for the 'centos-ruby' image.
+#
 
 if [ -e /tmp/artifacts/gems.tgz ]; then
   echo "Restoring build artifacts"
